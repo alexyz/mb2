@@ -7,6 +7,7 @@ import java.util.Date;
 public class MBJF extends JFrame {
 
     public static void main(String[] args) {
+        System.out.println("maxmem=" + (Runtime.getRuntime().maxMemory()>>20) + "M");
         MBJF f = new MBJF();
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         f.setLocationRelativeTo(null);

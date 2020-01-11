@@ -26,17 +26,20 @@ public class MBJC extends JComponent implements MouseListener, MouseMotionListen
         g2.drawImage(model.image, null, 0, 0);
         g2.setColor(Color.green);
         int ys = 20;
-        g2.drawString("it=" + model.iter + " in=" + model.in + " out=" + model.out, 20, ys += 20);
-        g2.drawString("r1,i1=" + model.r1+", " + model.i1 + " r2,i2=" + model.r2 + ", " + model.i2, 20, ys += 20);
+        Runtime r = Runtime.getRuntime();
+        long used = r.totalMemory()-r.freeMemory();
+        g2.drawString("it=" + model.it + " step=" + model.getistep() + " in=" + model.in.size() + " out=" + model.out.size() + " unknown=" + model.unknown.size(), 20, ys += 20);
+        g2.drawString("zlist=" + (model.size >> 20) + "M" + " usedmem=" + (used >> 20) + "M", 20, ys += 20);
+        g2.drawString("c1=" + new C(model.r1, model.i1) + " c2=" + new C(model.r2, model.i2), 20, ys += 20);
         if (mp != null) {
-            g2.drawString("m=" + mp.x + ", " + mp.y + " => " + model.xtor(mp.x) +", " + model.ytoi(mp.y), 20, ys += 20);
+            g2.drawString("mouse=" + mp.x + "," + mp.y + " => " + new C(model.xtor(mp.x), model.ytoi(mp.y)), 20, ys += 20);
         }
-        if (p1 != null) {
-            g2.drawString("p1=" + p1.x + ", " + p1.y + " => " + model.xtor(p1.x) +", " + model.ytoi(p1.y), 20, ys += 20);
-        }
-        if (p2 != null) {
-            g2.drawString("p2=" + p2.x + ", " + p2.y + " => " + model.xtor(p2.x) +", " + model.ytoi(p2.y), 20, ys += 20);
-        }
+//        if (p1 != null) {
+//            g2.drawString("p1=" + p1.x + ", " + p1.y + " => " + model.xtor(p1.x) +", " + model.ytoi(p1.y), 20, ys += 20);
+//        }
+//        if (p2 != null) {
+//            g2.drawString("p2=" + p2.x + ", " + p2.y + " => " + model.xtor(p2.x) +", " + model.ytoi(p2.y), 20, ys += 20);
+//        }
         if (p1 != null && p2 != null) {
             int minx = Math.min(p1.x, p2.x), maxx = Math.max(p1.x, p2.x);
             int miny = Math.min(p1.y, p2.y), maxy = Math.max(p1.y, p2.y);
