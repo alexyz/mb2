@@ -10,9 +10,16 @@ public class C {
     }
 
     public final double r, i;
+    public final int n;
+
     public C(double r, double i) {
+        this(r, i, 0);
+    }
+
+    public C(double r, double i, int n) {
         this.r = r;
         this.i = i;
+        this.n = n;
     }
 
     @Override
@@ -34,7 +41,9 @@ public class C {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append(r);
-        if (i >= 0) sb.append("+"); sb.append(i).append("i");
+        if (i >= 0) sb.append("+");
+        sb.append(i).append("i");
+        if (n > 0) sb.append("[").append(n).append("]");
         return sb.toString();
     }
 }

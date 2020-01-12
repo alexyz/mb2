@@ -99,7 +99,8 @@ public class MBM {
             int prevout = 0;
             while (isrunning) {
                 if (unknown.size() > 0) {
-                    boolean findin = prevout > 0 && out.size() + 16 >= prevout && it > 1024 && unknown.size() < 100000;
+                    //boolean findin = prevout > 0 && out.size() + 16 >= prevout && it > 1024 && unknown.size() < 100000;
+                    boolean findin = true;
                     trun2(findin);
                     prevout = out.size();
                 } else {
@@ -152,7 +153,7 @@ public class MBM {
                 }
                 //p.distance = p.distance + Math.hypot(p.zr-zr,p.zi-zi);
                 //p.push(it + n, new C(zr, zi));
-                if (findin && p.add(new C(zr, zi))) {
+                if (findin && p.add(new C(zr, zi, it+n))) {
                     //System.out.println("in at " + (p.distance / (it+itstep)));
                     p.escape = e = 0 - it - itstep - 1;
                     p.clear();

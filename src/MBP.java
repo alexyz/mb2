@@ -6,7 +6,7 @@ public class MBP {
     public double zr, zi;
     public int escape;
     //public C[] zlist;
-    public HashSet<C> zset;
+    public HashMap<C,C> zset;
     public double distance;
 
     public MBP(int x, int y, double cr, double ci) {
@@ -27,9 +27,16 @@ public class MBP {
 
     public boolean add(C c) {
         if (zset == null) {
-            zset = new HashSet<C>(256, 0.75f);
+            zset = new HashMap<>(256, 0.75f);
         }
-        return !zset.add(c);
+        C d = zset.get(c);
+        if (d != null) {
+            System.out.println("cycle " + d.n + ", " + c.n + " => " + (c.n-d.n));
+            return true;
+        } else {
+            zset.put(c,c);
+            return false;
+        }
     }
 
     public void clear() {
@@ -61,6 +68,6 @@ public class MBP {
 
     @Override
     public String toString() {
-        return cr + "+" + ci + "i";
+        return new C(cr,ci).toString();
     }
 }
