@@ -13,7 +13,6 @@ public class MBM {
     public final BufferedImage image;
     public double r1, r2, i1, i2;
     public int it;
-    public long size;
 
     private final int width, height;
     private volatile boolean isrunning;
@@ -96,21 +95,18 @@ public class MBM {
         try {
             println("trun");
             long t1 = System.nanoTime();
-            int prevout = 0;
+            long[] zhash = new long[256];
             while (isrunning) {
                 if (unknown.size() > 0) {
-                    //boolean findin = prevout > 0 && out.size() + 16 >= prevout && it > 1024 && unknown.size() < 100000;
-                    boolean findin = true;
-                    trun2(findin);
-                    prevout = out.size();
+                    zhash = trun2(zhash);
                 } else {
                     Thread.sleep(1000);
                 }
-                long t2 = System.nanoTime();
-                if (t2 > t1 + 2_000_000_000) {
-                    t1 = t2;
-                    System.gc();
-                }
+//                long t2 = System.nanoTime();
+//                if (t2 > t1 + 2_000_000_000) {
+//                    t1 = t2;
+//                    System.gc();
+//                }
             }
         } catch (Exception e) {
             e.printStackTrace(System.out);
@@ -120,14 +116,14 @@ public class MBM {
     }
 
     public int getistep() {
-        return Math.max(it >> 7, 32);
+        return Math.max((it >> 12) << 6, 256);
     }
 
-    public void trun2(boolean findin) {
+    public long[] trun2(long[] zhash) {
         int[] c1 = new int[3], c2 = new int[3];
         int it = this.it, itstep = getistep();
+        if (zhash.length != itstep) zhash = new long[itstep];
         WritableRaster raster = image.getRaster();
-        long size = 0;
 
         Iterator<MBP> i = unknown.iterator();
         while (i.hasNext() && isrunning) {
@@ -144,27 +140,44 @@ public class MBM {
                 zr = zr2;
                 zi = zi2;
                 if (zr * zr + zi * zi > 4) {
-                    //System.out.println("out at " + (p.distance / (it+itstep)));
-                    p.escape = e = it + n + 1;
-                    p.clear();
+                    e = it + n + 1;
+                    //p.clear();
                     i.remove();
                     out.add(p);
                     break;
                 }
-                //p.distance = p.distance + Math.hypot(p.zr-zr,p.zi-zi);
-                //p.push(it + n, new C(zr, zi));
-                if (findin && p.add(new C(zr, zi, it+n))) {
-                    //System.out.println("in at " + (p.distance / (it+itstep)));
-                    p.escape = e = 0 - it - itstep - 1;
-                    p.clear();
-                    i.remove();
-                    in.add(p);
-                    break;
+
+                long zrhash = Double.doubleToRawLongBits(zr), zihash = Double.doubleToRawLongBits(zi);
+                zhash[n] = zrhash ^ (zihash << 32) ^ (zihash >> 32);
+
+//                if (findin && p.add(new C(zr, zi, it+n))) {
+//                    p.escape = e = 0 - it - itstep - 1;
+//                    p.clear();
+//                    i.remove();
+//                    in.add(p);
+//                    break;
+//                }
+            }
+
+            p.escape = e;
+            p.zr = zr;
+            p.zi = zi;
+
+            if (e == 0) {
+                // check if in
+                //System.arraycopy(zlist[0], 0, zlist[2], 0, itstep);
+                Arrays.sort(zhash);
+                for (int n = 0; n < itstep - 1; n++) {
+                    if (zhash[n] == zhash[n + 1]) {
+                        // *probably* in
+                        p.escape = e = 0 - it - itstep - 1;
+                        i.remove();
+                        in.add(p);
+                        break;
+                    }
                 }
             }
 
-            p.zr = zr;
-            p.zi = zi;
 
 //            if (e == 0) {
 //                if (p.isloop()) {
@@ -199,11 +212,10 @@ public class MBM {
                 raster.setPixel(x, y, c1);
             }
 
-            size += p.size();
         }
 
-        this.size = size;
         this.it += itstep;
+        return zhash;
     }
 
 }

@@ -24,12 +24,12 @@ public class MBJC extends JComponent implements MouseListener, MouseMotionListen
         Graphics2D g2 = (Graphics2D) g;
         //int w = getWidth(), h = getHeight();
         g2.drawImage(model.image, null, 0, 0);
-        g2.setColor(Color.green);
+        g2.setColor(Color.white);
         int ys = 20;
         Runtime r = Runtime.getRuntime();
         long used = r.totalMemory()-r.freeMemory();
         g2.drawString("it=" + model.it + " step=" + model.getistep() + " in=" + model.in.size() + " out=" + model.out.size() + " unknown=" + model.unknown.size(), 20, ys += 20);
-        g2.drawString("zlist=" + (model.size >> 20) + "M" + " usedmem=" + (used >> 20) + "M", 20, ys += 20);
+        g2.drawString("usedmem=" + (used >> 20) + "M", 20, ys += 20);
         g2.drawString("c1=" + new C(model.r1, model.i1) + " c2=" + new C(model.r2, model.i2), 20, ys += 20);
         if (mp != null) {
             g2.drawString("mouse=" + mp.x + "," + mp.y + " => " + new C(model.xtor(mp.x), model.ytoi(mp.y)), 20, ys += 20);

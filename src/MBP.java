@@ -6,7 +6,7 @@ public class MBP {
     public double zr, zi;
     public int escape;
     //public C[] zlist;
-    public HashMap<C,C> zset;
+    //public HashMap<C,C> zset;
     public double distance;
 
     public MBP(int x, int y, double cr, double ci) {
@@ -18,40 +18,36 @@ public class MBP {
     }
 
 //    public void push(int i, C c) {
-        // FIXME try binsearch/insert
 //        if (i >= zlist.length) {
 //            zlist = Arrays.copyOf(zlist, zlist.length+256);
 //        }
 //        zlist[i] = c;
 //    }
 
-    public boolean add(C c) {
-        if (zset == null) {
-            zset = new HashMap<>(256, 0.75f);
-        }
-        C d = zset.get(c);
-        if (d != null) {
-            System.out.println("cycle " + d.n + ", " + c.n + " => " + (c.n-d.n));
-            return true;
-        } else {
-            zset.put(c,c);
-            return false;
-        }
-    }
-
-    public void clear() {
-//        Arrays.fill(zlist, null);
-//        zlist = null;
-        if (zset != null) {
-            zset.clear();
-            zset = null;
-        }
-    }
-
-    public int size() {
-        //return zlist != null ? zlist.length: 0;
-        return zset != null ? zset.size() : 0;
-    }
+//    public boolean add(C c) {
+//        if (zset == null) {
+//            zset = new HashMap<>(256, 0.75f);
+//        }
+//        C d = zset.get(c);
+//        if (d != null) {
+//            System.out.println("cycle " + d.n + ", " + c.n + " => " + (c.n-d.n));
+//            return true;
+//        } else {
+//            zset.put(c,c);
+//            return false;
+//        }
+//    }
+//
+//    public void clear() {
+//        if (zset != null) {
+//            zset.clear();
+//            zset = null;
+//        }
+//    }
+//
+//    public int size() {
+//        return zset != null ? zset.size() : 0;
+//    }
 
 //    public boolean isloop() {
 //        Arrays.sort(zlist, CCmp.instance);
