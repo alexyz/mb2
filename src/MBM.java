@@ -1,6 +1,8 @@
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.util.*;
+import java.util.List;
 
 public class MBM {
 
@@ -8,15 +10,13 @@ public class MBM {
         MBJF.println("MBM", o);
     }
 
-    public final List<MBP> unknown = new LinkedList<>();
+    public final Deque<MBP> unknown = new ArrayDeque<>();
     public final List<MBP> out = new ArrayList<>(), in = new ArrayList<>();
     public final BufferedImage image;
     public double r1, r2, i1, i2;
-    public int it;
-
     private final int width, height;
-    private volatile boolean isrunning;
-    private List<Thread> threads = new ArrayList<>();
+    private List<MBMR> threads = new ArrayList<>();
+    public volatile int twait;
 
     public MBM(int w, int h) {
         this.image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
@@ -44,90 +44,103 @@ public class MBM {
 
     public void init(double r1, double i1, double r2, double i2) {
         println("init " + r1 + "," + i1 + " ... " + r2 + "," + i2);
-        if (isrunning) throw new RuntimeException();
         if (r1 >= r2 || i1 >= i2) throw new RuntimeException();
         this.r1 = r1;
         this.r2 = r2;
         this.i1 = i1;
         this.i2 = i2;
-        this.in.clear();
-        this.out.clear();
-        this.unknown.clear();
-        this.it = 0;
-        int[] c = new int[] { 127, 127, 127 };
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                unknown.add(new MBP(x, y, xtor(x), ytoi(y)));
-                image.getRaster().setPixel(x, y, c);
+        synchronized (unknown) {
+            this.in.clear();
+            this.out.clear();
+            this.unknown.clear();
+            for (MBMR t : threads) {
+                t.isrunning = false;
+                // fixme doesn't wait for threads to stop
             }
-        }
-        println("aaa[0][0]=" + unknown.get(0));
-        println("aaa[h][w]=" + unknown.get(unknown.size() - 1));
-    }
-
-    // 4 cores... update different rows
-    public void start() {
-        println("start it=" + it);
-        if (isrunning) throw new RuntimeException();
-        Thread t = new Thread(() -> trun());
-        t.setPriority(Thread.MIN_PRIORITY);
-        t.setDaemon(true);
-        t.start();
-        threads.add(t);
-        isrunning = true;
-    }
-
-    public void stop() {
-        println("stop");
-        if (!isrunning) throw new RuntimeException();
-        try {
-            isrunning = false;
-            for (Thread t : threads) {
-                t.join();
-            }
-            println("stopped");
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void trun() {
-        try {
-            println("trun");
-            long t1 = System.nanoTime();
-            long[] zhash = new long[256];
-            while (isrunning) {
-                if (unknown.size() > 0) {
-                    zhash = trun2(zhash);
-                } else {
-                    Thread.sleep(1000);
+            image.getGraphics().setColor(Color.gray);
+            image.getGraphics().drawRect(0, 0, image.getWidth(), image.getHeight());
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    unknown.add(new MBP(x, y, xtor(x), ytoi(y)));
                 }
-//                long t2 = System.nanoTime();
-//                if (t2 > t1 + 2_000_000_000) {
-//                    t1 = t2;
-//                    System.gc();
-//                }
             }
-        } catch (Exception e) {
-            e.printStackTrace(System.out);
-        } finally {
-            println("trun stop");
+            unknown.notifyAll();
         }
     }
 
-    public int getistep() {
-        return Math.max((it >> 12) << 6, 256);
+    public void start() {
+        for (int n = 0; n < 4; n++) {
+            MBMR t = new MBMR(image.getRaster());
+            t.setPriority(Thread.MIN_PRIORITY);
+            t.setDaemon(true);
+            t.start();
+            threads.add(t);
+        }
     }
 
-    public long[] trun2(long[] zhash) {
-        int[] c1 = new int[3], c2 = new int[3];
-        int it = this.it, itstep = getistep();
-        if (zhash.length != itstep) zhash = new long[itstep];
-        WritableRaster raster = image.getRaster();
+    public MBP nextp(MBP p) {
+        synchronized (unknown) {
+            if (p != null) {
+                if (p.escape == 0) {
+                    unknown.add(p);
+                    unknown.notify();
+                } else if (p.escape < 0) {
+                    in.add(p);
+                } else if (p.escape > 0) {
+                    out.add(p);
+                }
+            }
+            while ((p = unknown.poll()) == null) {
+                try {
+                    twait++;
+                    unknown.wait();
+                    twait--;
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return p;
+        }
+    }
 
-        Iterator<MBP> i = unknown.iterator();
-        while (i.hasNext() && isrunning) {
-            MBP p = i.next();
+    private class MBMR extends Thread {
+        public boolean isrunning;
+        int[] c1 = new int[3], c2 = new int[3];
+        long[] zhash = new long[256];
+        WritableRaster raster;
+
+        public MBMR(WritableRaster r) {
+            this.raster = r;
+        }
+
+        public void run() {
+            try {
+                println("run");
+                MBP p = null;
+                while (true) {
+                    p = nextp(p);
+                    if (p != null) {
+                        iter(p);
+                        if (p.escape != 0) {
+                            p = null;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace(System.out);
+            } finally {
+                println("run stop");
+            }
+        }
+
+        public int getistep(MBP p) {
+            return Math.max((p.it >> 12) << 6, 256);
+        }
+
+        public void iter(MBP p) {
+            int it = p.it, itstep = getistep(p);
+            if (zhash.length != itstep) zhash = new long[itstep];
+            isrunning = true;
 
             // z[n+1] = z[n]^2 + c
             // (a+bi)^2 = a^2 + 2abi - b^2
@@ -141,22 +154,11 @@ public class MBM {
                 zi = zi2;
                 if (zr * zr + zi * zi > 4) {
                     e = it + n + 1;
-                    //p.clear();
-                    i.remove();
-                    out.add(p);
                     break;
                 }
 
                 long zrhash = Double.doubleToRawLongBits(zr), zihash = Double.doubleToRawLongBits(zi);
-                zhash[n] = zrhash ^ (zihash << 32) ^ (zihash >> 32);
-
-//                if (findin && p.add(new C(zr, zi, it+n))) {
-//                    p.escape = e = 0 - it - itstep - 1;
-//                    p.clear();
-//                    i.remove();
-//                    in.add(p);
-//                    break;
-//                }
+                zhash[n] = zrhash ^ (zihash << 32) ^ (zihash >>> 32);
             }
 
             p.escape = e;
@@ -164,47 +166,32 @@ public class MBM {
             p.zi = zi;
 
             if (e == 0) {
-                // check if in
-                //System.arraycopy(zlist[0], 0, zlist[2], 0, itstep);
                 Arrays.sort(zhash);
                 for (int n = 0; n < itstep - 1; n++) {
                     if (zhash[n] == zhash[n + 1]) {
                         // *probably* in
-                        p.escape = e = 0 - it - itstep - 1;
-                        i.remove();
-                        in.add(p);
+                        // guess the cycle length
+                        p.escape = e = 0 - zhash.length;
                         break;
                     }
                 }
             }
 
-
-//            if (e == 0) {
-//                if (p.isloop()) {
-//                    p.escape = e = 0 - it - itstep - 1;
-//                    p.clear();
-//                    i.remove();
-//                    in.add(p);
-//                }
-//            }
-
             // update escaped pixel colour
             if (e > 0) {
-                //int v = (255 * e) / (it + itstep);
-                c1[0] = 0;
-                //c1[0] = (int) Math.min(255, 255.0*(p.distance/e));
+                int v = (255 * e) / (it + itstep);
+                c1[0] = v;
                 c1[1] = 0;
                 c1[2] = 0;
             } else if (e < 0) {
                 //int v = (-255 * e) / (it + itstep);
-                c1[0] = 0;
+                c1[0] = 255;
                 c1[1] = 255;
-                //c1[1] = (int) Math.min(255, 255.0*(p.distance/e));
-                c1[2] = 0;
-            } else {
-                c1[0] = 0;
-                c1[1] = 0;
                 c1[2] = 255;
+            } else {
+                c1[0] = 127;
+                c1[1] = 127;
+                c1[2] = 127;
             }
 
             raster.getPixel(x, y, c2);
@@ -212,10 +199,7 @@ public class MBM {
                 raster.setPixel(x, y, c1);
             }
 
+            p.it += itstep;
         }
-
-        this.it += itstep;
-        return zhash;
     }
-
 }

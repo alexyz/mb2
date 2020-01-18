@@ -20,26 +20,18 @@ public class MBJC extends JComponent implements MouseListener, MouseMotionListen
             model = new MBM(getWidth(), getHeight());
             model.start();
         }
-        //model.run();
         Graphics2D g2 = (Graphics2D) g;
-        //int w = getWidth(), h = getHeight();
         g2.drawImage(model.image, null, 0, 0);
         g2.setColor(Color.white);
         int ys = 20;
         Runtime r = Runtime.getRuntime();
         long used = r.totalMemory()-r.freeMemory();
-        g2.drawString("it=" + model.it + " step=" + model.getistep() + " in=" + model.in.size() + " out=" + model.out.size() + " unknown=" + model.unknown.size(), 20, ys += 20);
-        g2.drawString("usedmem=" + (used >> 20) + "M", 20, ys += 20);
+        g2.drawString("in=" + model.in.size() + " out=" + model.out.size() + " unknown=" + model.unknown.size(), 20, ys += 20);
+        g2.drawString("twait=" + model.twait + " usedmem=" + (used >> 20) + "M", 20, ys += 20);
         g2.drawString("c1=" + new C(model.r1, model.i1) + " c2=" + new C(model.r2, model.i2), 20, ys += 20);
         if (mp != null) {
             g2.drawString("mouse=" + mp.x + "," + mp.y + " => " + new C(model.xtor(mp.x), model.ytoi(mp.y)), 20, ys += 20);
         }
-//        if (p1 != null) {
-//            g2.drawString("p1=" + p1.x + ", " + p1.y + " => " + model.xtor(p1.x) +", " + model.ytoi(p1.y), 20, ys += 20);
-//        }
-//        if (p2 != null) {
-//            g2.drawString("p2=" + p2.x + ", " + p2.y + " => " + model.xtor(p2.x) +", " + model.ytoi(p2.y), 20, ys += 20);
-//        }
         if (p1 != null && p2 != null) {
             int minx = Math.min(p1.x, p2.x), maxx = Math.max(p1.x, p2.x);
             int miny = Math.min(p1.y, p2.y), maxy = Math.max(p1.y, p2.y);
@@ -51,9 +43,7 @@ public class MBJC extends JComponent implements MouseListener, MouseMotionListen
     @Override
     public void mouseClicked(MouseEvent e) {
         if (e.getButton() == MouseEvent.BUTTON3) {
-            model.stop();
             model.reinit();
-            model.start();
         }
     }
 
@@ -66,11 +56,9 @@ public class MBJC extends JComponent implements MouseListener, MouseMotionListen
     public void mouseReleased(MouseEvent e) {
         p2 = e.getPoint();
         if (p1 != null && p1.x != p2.x && p1.y != p2.y) {
-            model.stop();
             double r1 = model.xtor(Math.min(p1.x, p2.x)), r2 = model.xtor(Math.max(p1.x, p2.x));
             double i1 = model.ytoi(Math.min(p1.y, p2.y)), i2 = model.ytoi(Math.max(p1.y, p2.y));
             model.init(r1, i1, r2, i2);
-            model.start();
         }
         p1 = null;
         p2 = null;
