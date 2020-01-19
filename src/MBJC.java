@@ -27,7 +27,7 @@ public class MBJC extends JComponent implements MouseListener, MouseMotionListen
         Runtime r = Runtime.getRuntime();
         long used = r.totalMemory()-r.freeMemory();
         g2.drawString("in=" + model.in.size() + " out=" + model.out.size() + " unknown=" + model.unknown.size(), 20, ys += 20);
-        g2.drawString("twait=" + model.twait + " usedmem=" + (used >> 20) + "M", 20, ys += 20);
+        g2.drawString("maxit=" + model.maxit + " maxin=" + model.maxin + " maxout=" + model.maxout + " twait=" + model.twait + " mem=" + (used >> 20) + "M", 20, ys += 20);
         g2.drawString("c1=" + new C(model.r1, model.i1) + " c2=" + new C(model.r2, model.i2), 20, ys += 20);
         if (mp != null) {
             g2.drawString("mouse=" + mp.x + "," + mp.y + " => " + new C(model.xtor(mp.x), model.ytoi(mp.y)), 20, ys += 20);

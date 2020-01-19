@@ -16,7 +16,7 @@ public class MBM {
     public double r1, r2, i1, i2;
     private final int width, height;
     private List<MBMR> threads = new ArrayList<>();
-    public volatile int twait;
+    public volatile int twait, maxin, maxout, maxit;
 
     public MBM(int w, int h) {
         this.image = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
@@ -50,6 +50,9 @@ public class MBM {
         this.i1 = i1;
         this.i2 = i2;
         synchronized (unknown) {
+            maxin = 0;
+            maxout = 0;
+            maxit = 0;
             this.in.clear();
             this.out.clear();
             this.unknown.clear();
@@ -82,11 +85,14 @@ public class MBM {
         synchronized (unknown) {
             if (p != null) {
                 if (p.escape == 0) {
+                    maxit = Math.max(maxit, p.it);
                     unknown.add(p);
                     unknown.notify();
                 } else if (p.escape < 0) {
+                    maxin = Math.max(maxin, -p.escape);
                     in.add(p);
                 } else if (p.escape > 0) {
+                    maxout = Math.max(maxout, p.escape);
                     out.add(p);
                 }
             }
@@ -105,9 +111,9 @@ public class MBM {
 
     private class MBMR extends Thread {
         public boolean isrunning;
-        int[] c1 = new int[3], c2 = new int[3];
-        long[] zhash = new long[256];
-        WritableRaster raster;
+        private final int[] c1 = new int[3], c2 = new int[3];
+        private final long[] zhash = new long[1<<20]; // 8mb
+        private final WritableRaster raster;
 
         public MBMR(WritableRaster r) {
             this.raster = r;
@@ -119,33 +125,31 @@ public class MBM {
                 MBP p = null;
                 while (true) {
                     p = nextp(p);
-                    if (p != null) {
-                        iter(p);
-                        if (p.escape != 0) {
-                            p = null;
-                        }
-                    }
+                    iter(p);
                 }
             } catch (Exception e) {
                 e.printStackTrace(System.out);
-            } finally {
-                println("run stop");
             }
         }
 
         public int getistep(MBP p) {
+            // fixme this shouldn't be linear... if it didn't escape at 1m, no point checking 1.1m or 1.2m
             return Math.max((p.it >> 12) << 6, 256);
         }
 
         public void iter(MBP p) {
-            int it = p.it, itstep = getistep(p);
-            if (zhash.length != itstep) zhash = new long[itstep];
+            int itstep = getistep(p);
+            if (itstep > zhash.length) {
+                System.out.println("itstep " + itstep + " > zhash " + zhash.length);
+                p.escape = -itstep;
+                return;
+            }
             isrunning = true;
 
             // z[n+1] = z[n]^2 + c
             // (a+bi)^2 = a^2 + 2abi - b^2
             double cr = p.cr, ci = p.ci, zr = p.zr, zi = p.zi;
-            int e = 0, x = p.x, y = p.y;
+            int it = p.it, e = 0, x = p.x, y = p.y;
 
             for (int n = 0; n < itstep && isrunning; n++) {
                 double zr2 = ((zr * zr) - (zi * zi)) + cr;
@@ -166,7 +170,8 @@ public class MBM {
             p.zi = zi;
 
             if (e == 0) {
-                Arrays.sort(zhash);
+                //Arrays.sort(zhash);
+                QSort.qsort(zhash, 0, itstep);
                 for (int n = 0; n < itstep - 1; n++) {
                     if (zhash[n] == zhash[n + 1]) {
                         // *probably* in
@@ -177,6 +182,7 @@ public class MBM {
                 }
             }
 
+            // fixme this shouldn't really be in the iteration
             // update escaped pixel colour
             if (e > 0) {
                 int v = (255 * e) / (it + itstep);
